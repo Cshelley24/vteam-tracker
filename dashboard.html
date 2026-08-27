@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Virtual 1 vs Virtual 2 — Rep Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f14;
+    --panel: #151a21;
+    --panel-border: #232a34;
+    --text: #e9edf2;
+    --text-dim: #8993a3;
+    --v1: #f2a93b;
+    --v1-dim: #7a5a24;
+    --v2: #45c8e0;
+    --v2-dim: #245a66;
+    --gold: #ffd166;
+    --silver: #c8ccd1;
+    --bronze: #cd8a5e;
+    --good: #4fd18b;
+    --bad: #e0605a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  h1 span.v1 { color: var(--v1); }
+  h1 span.vs { color: var(--text-dim); font-weight: 500; margin: 0 6px; }
+  h1 span.v2 { color: var(--v2); }
+
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 0 rgba(79, 209, 139, 0.6);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(79, 209, 139, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(79, 209, 139, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 209, 139, 0); }
+  }
+
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  nav.window-select {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  nav.window-select button {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--text-dim);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  nav.window-select button.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #1a1508;
+  }
+
+  nav.window-select button:hover:not(.active) {
+    color: var(--text);
+    border-color: var(--text-dim);
+  }
+
+  nav.tabs button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 18px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  nav.tabs button.active { color: var(--text); border-bottom-color: var(--gold); }
+  nav.tabs button:hover { color: var(--text); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .team-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.v1 { background: var(--v1); }
+  .dot.v2 { background: var(--v2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-weight: 600;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  thead th.num, tbody td.num { text-align: right; }
+
+  tbody td {
+    padding: 12px 14px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  .rank {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    width: 28px;
+    display: inline-block;
+    text-align: center;
+  }
+  .rank.gold { color: var(--gold); }
+  .rank.silver { color: var(--silver); }
+  .rank.bronze { color: var(--bronze); }
+  .rank.other { color: var(--text-dim); }
+
+  .rep-name { font-weight: 600; }
+
+  .net-positive { color: var(--good); font-weight: 700; }
+  .net-negative { color: var(--bad); font-weight: 700; }
+  .net-empty { color: var(--text-dim); }
+
+  /* Comparison view */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .compare-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .compare-card h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    margin: 0 0 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .metric-row:last-child { border-bottom: none; }
+
+  .metric-label { font-size: 13px; color: var(--text-dim); }
+  .metric-value { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; }
+
+  .bar-row { margin: 18px 0; }
+  .bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .bar-track {
+    height: 8px;
+    background: var(--panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+  }
+  .bar-fill { height: 100%; transition: width 0.4s ease; }
+  .bar-fill.v1 { background: var(--v1); }
+  .bar-fill.v2 { background: var(--v2); }
+
+  .empty-state, .error-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .error-state { color: var(--bad); }
+
+  .config-note {
+    background: var(--panel);
+    border: 1px dashed var(--panel-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .config-note code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  @media (max-width: 700px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    thead th, tbody td { padding: 10px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1><span class="v1">VIRTUAL 1</span><span class="vs">vs</span><span class="v2">VIRTUAL 2</span></h1>
+    <div class="sync-status">
+      <span class="pulse"></span>
+      <span id="syncTime">Loading…</span>
+    </div>
+  </header>
+
+  <div class="config-note" id="configNote">
+    Reading live from your Google Sheet. Set <code>SHEET_ID</code> at the top of the script block below,
+    and make sure the sheet is shared as "Anyone with the link can view." Use the pills above to switch
+    between Today, Week to Date, Last 7/30/60 Days.
+  </div>
+
+  <nav class="window-select" id="windowSelect">
+    <button class="window-btn active" data-window="today">Today</button>
+    <button class="window-btn" data-window="wtd">Week to Date</button>
+    <button class="window-btn" data-window="last7">Last 7 Days</button>
+    <button class="window-btn" data-window="last30">Last 30 Days</button>
+    <button class="window-btn" data-window="last60">Last 60 Days</button>
+  </nav>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-panel="v1">Virtual 1</button>
+    <button class="tab-btn" data-panel="v2">Virtual 2</button>
+    <button class="tab-btn" data-panel="compare">Comparison</button>
+  </nav>
+
+  <div class="panel active" id="panel-v1">
+    <div class="team-heading"><span class="dot v1"></span> Virtual 1 Leaderboard</div>
+    <div id="v1Table"><div class="empty-state">Loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-v2">
+    <div class="team-heading"><span class="dot v2"></span> Virtual 2 Leaderboard</div>
+    <div id="v2Table"><div class="empty-state">Loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-compare">
+    <div id="compareContent"><div class="empty-state">Loading…</div></div>
+  </div>
+
+</div>
+
+<script>
+// ================= CONFIG =================
+// Paste your Google Sheet ID here (the long string in the sheet's URL between
+// /d/ and /edit). The sheet must be shared as "Anyone with the link can view."
+const SHEET_ID = '1KM0X10_SNwyWgM39oQT0qvAWaayDa2rG_AQEpamJ6Dc';
+
+// Maps each window selection to the actual sheet tab name per team.
+// These tab names must match exactly what Code.gs creates.
+const TAB_MAP = {
+  today:  { v1: 'V1_Raw',    v2: 'V2_Raw' },
+  wtd:    { v1: 'V1_WTD',    v2: 'V2_WTD' },
+  last7:  { v1: 'V1_Last7',  v2: 'V2_Last7' },
+  last30: { v1: 'V1_Last30', v2: 'V2_Last30' },
+  last60: { v1: 'V1_Last60', v2: 'V2_Last60' }
+};
+
+let currentWindow = 'today';
+const REFRESH_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
+// ============================================
+
+function gvizUrl(tabName) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+}
+
+async function fetchTab(tabName) {
+  const res = await fetch(gvizUrl(tabName));
+  const text = await res.text();
+  // gviz wraps JSON in a JS callback — strip it
+  const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  const data = JSON.parse(jsonStr);
+  const cols = data.table.cols.map(c => c.label);
+  const rows = (data.table.rows || []).map(r =>
+    r.c.map(cell => (cell ? (cell.v !== null && cell.v !== undefined ? cell.v : '') : ''))
+  );
+  return { cols, rows };
+}
+
+function rankClass(i) {
+  if (i === 0) return 'gold';
+  if (i === 1) return 'silver';
+  if (i === 2) return 'bronze';
+  return 'other';
+}
+
+function fmtNet(v) {
+  if (v === '' || v === null || v === undefined) return '<span class="net-empty">—</span>';
+  const n = Number(v);
+  if (n > 0) return `<span class="net-positive">+${n}</span>`;
+  if (n < 0) return `<span class="net-negative">${n}</span>`;
+  return `<span>${n}</span>`;
+}
+
+function buildLeaderboardTable(cols, rows, hasAi) {
+  if (!rows.length) return '<div class="empty-state">No data yet — waiting on first sync.</div>';
+  if (rows.length === 1 && rows[0][0] === 'No data yet') {
+    return '<div class="empty-state">No data yet for this time window.</div>';
+  }
+
+  // Net Booking is always the last column; sort desc by it (blank = bottom)
+  const netIdx = cols.length - 1;
+  const sorted = [...rows].sort((a, b) => {
+    const av = a[netIdx] === '' ? -Infinity : Number(a[netIdx]);
+    const bv = b[netIdx] === '' ? -Infinity : Number(b[netIdx]);
+    return bv - av;
+  });
+
+  const headerCols = hasAi
+    ? ['Rank', 'Rep', 'Leads', 'Appts (Human)', 'Appts (AI)', 'Booking', 'Cancelled', 'Net']
+    : ['Rank', 'Rep', 'Leads', 'Appts (Human)', 'Booking', 'Cancelled', 'Net'];
+
+  let html = '<table><thead><tr>';
+  headerCols.forEach((h, i) => {
+    html += `<th class="${i > 1 ? 'num' : ''}">${h}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  sorted.forEach((row, i) => {
+    html += '<tr>';
+    html += `<td><span class="rank ${rankClass(i)}">${i + 1}</span></td>`;
+    html += `<td class="rep-name">${row[0]}</td>`;
+    html += `<td class="num">${row[1]}</td>`;
+    html += `<td class="num">${row[2]}</td>`;
+    if (hasAi) html += `<td class="num">${row[3]}</td>`;
+    const bookIdx = hasAi ? 4 : 3;
+    const cancelIdx = hasAi ? 5 : 4;
+    html += `<td class="num">${row[bookIdx] === '' ? '—' : row[bookIdx]}</td>`;
+    html += `<td class="num">${row[cancelIdx] === '' ? '—' : row[cancelIdx]}</td>`;
+    html += `<td class="num">${fmtNet(row[netIdx])}</td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+function sumCol(rows, idx) {
+  return rows.reduce((acc, r) => acc + (r[idx] === '' ? 0 : Number(r[idx])), 0);
+}
+
+function buildComparison(v1Data, v2Data) {
+  const v1Rows = v1Data.rows.filter(r => r[0] !== 'No data yet');
+  const v2Rows = v2Data.rows.filter(r => r[0] !== 'No data yet');
+  const v1Leads = sumCol(v1Rows, 1), v2Leads = sumCol(v2Rows, 1);
+  const v1Human = sumCol(v1Rows, 2), v2Human = sumCol(v2Rows, 2);
+  const v1Ai = sumCol(v1Rows, 3);
+  const v1Book = sumCol(v1Rows, 4), v2Book = sumCol(v2Rows, 3);
+  const v1Cancel = sumCol(v1Rows, 5), v2Cancel = sumCol(v2Rows, 4);
+  const v1Net = sumCol(v1Rows, 6), v2Net = sumCol(v2Rows, 5);
+
+  function bar(label, a, b) {
+    const total = a + b || 1;
+    const aPct = Math.round((a / total) * 100);
+    const bPct = 100 - aPct;
+    return `
+      <div class="bar-row">
+        <div class="bar-label"><span>${label}</span><span>${a} — ${b}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill v1" style="width:${aPct}%"></div>
+          <div class="bar-fill v2" style="width:${bPct}%"></div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h3><span class="dot v1"></span> Virtual 1 Totals</h3>
+        <div class="metric-row"><span class="metric-label">Lead Count</span><span class="metric-value">${v1Leads}</span></div>
+        <div class="metric-row"><span class="metric-label">Appointments — Human</span><span class="metric-value">${v1Human}</span></div>
+        <div class="metric-row"><span class="metric-label">Appointments — AI</span><span class="metric-value">${v1Ai}</span></div>
+        <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v1Book}</span></div>
+        <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v1Cancel}</span></div>
+        <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v1Net)}</span></div>
+      </div>
+      <div class="compare-card">
+        <h3><span class="dot v2"></span> Virtual 2 Totals</h3>
+        <div class="metric-row"><span class="metric-label">Lead Count</span><span class="metric-value">${v2Leads}</span></div>
+        <div class="metric-row"><span class="metric-label">Appointments — Human</span><span class="metric-value">${v2Human}</span></div>
+        <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v2Book}</span></div>
+        <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v2Cancel}</span></div>
+        <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v2Net)}</span></div>
+      </div>
+    </div>
+    <div class="compare-card" style="margin-top:16px;">
+      <h3>Head-to-Head</h3>
+      ${bar('Lead Count', v1Leads, v2Leads)}
+      ${bar('Human Appointments', v1Human, v2Human)}
+      ${bar('Booking', v1Book, v2Book)}
+      ${bar('Net Booking', Math.max(v1Net,0), Math.max(v2Net,0))}
+    </div>
+  `;
+}
+
+async function refresh() {
+  try {
+    const tabs = TAB_MAP[currentWindow];
+    const [v1Data, v2Data] = await Promise.all([fetchTab(tabs.v1), fetchTab(tabs.v2)]);
+
+    document.getElementById('v1Table').innerHTML = buildLeaderboardTable(v1Data.cols, v1Data.rows, true);
+    document.getElementById('v2Table').innerHTML = buildLeaderboardTable(v2Data.cols, v2Data.rows, false);
+    document.getElementById('compareContent').innerHTML = buildComparison(v1Data, v2Data);
+
+    document.getElementById('syncTime').textContent =
+      'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('configNote').style.display = 'none';
+  } catch (err) {
+    document.getElementById('v1Table').innerHTML = `<div class="error-state">Couldn't load data. Check SHEET_ID and sharing settings.</div>`;
+    document.getElementById('syncTime').textContent = 'Sync failed';
+    console.error(err);
+  }
+}
+
+document.querySelectorAll('.window-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentWindow = btn.dataset.window;
+    document.getElementById('syncTime').textContent = 'Loading…';
+    refresh();
+  });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  });
+});
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
