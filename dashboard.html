@@ -381,8 +381,8 @@ const state = {
 
 // Column key -> row index, matching the layout Code.gs writes.
 function colIndexForKey(key, hasAi) {
-  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, setHuman: 4, setAi: 5, booking: 6, cancelled: 7, net: 8 };
-  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, setHuman: 3, booking: 4, cancelled: 5, net: 6 };
+  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, setHuman: 4, setAi: 5, booking: 6, cancelled: 7, net: 8, coperniqAppts: 9 };
+  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, setHuman: 3, booking: 4, cancelled: 5, net: 6, coperniqAppts: 7 };
   return (hasAi ? mapWithAi : mapNoAi)[key];
 }
 // ============================================
@@ -447,7 +447,8 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
     return '<div class="empty-state">No data yet for this time window.</div>';
   }
 
-  const netIdx = cols.length - 1;
+  const netIdx = colIndexForKey('net', hasAi);
+  const coperniqIdx = colIndexForKey('coperniqAppts', hasAi);
   const bookIdx = hasAi ? 6 : 4;
   const cancelIdx = hasAi ? 7 : 5;
   const humanPctIdx = hasAi ? 4 : 3;
@@ -468,7 +469,8 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
         { label: 'Set % (AI)', key: 'setAi' },
         { label: 'Booking', key: 'booking' },
         { label: 'Cancelled', key: 'cancelled' },
-        { label: 'Net', key: 'net' }
+        { label: 'Net', key: 'net' },
+        { label: 'Coperniq Appts', key: 'coperniqAppts' }
       ]
     : [
         { label: 'Rank' },
@@ -478,7 +480,8 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
         { label: 'Set % (Human)', key: 'setHuman' },
         { label: 'Booking', key: 'booking' },
         { label: 'Cancelled', key: 'cancelled' },
-        { label: 'Net', key: 'net' }
+        { label: 'Net', key: 'net' },
+        { label: 'Coperniq Appts', key: 'coperniqAppts' }
       ];
 
   let html = '<table><thead><tr>';
@@ -506,6 +509,7 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
     html += `<td class="num">${totalRow[bookIdx] === '' ? '—' : totalRow[bookIdx]}</td>`;
     html += `<td class="num">${totalRow[cancelIdx] === '' ? '—' : totalRow[cancelIdx]}</td>`;
     html += `<td class="num">${fmtNet(totalRow[netIdx])}</td>`;
+    html += `<td class="num">${totalRow[coperniqIdx] === '' || totalRow[coperniqIdx] == null ? '—' : totalRow[coperniqIdx]}</td>`;
     html += '</tr>';
   }
 
@@ -521,6 +525,7 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
     html += `<td class="num">${row[bookIdx] === '' ? '—' : row[bookIdx]}</td>`;
     html += `<td class="num">${row[cancelIdx] === '' ? '—' : row[cancelIdx]}</td>`;
     html += `<td class="num">${fmtNet(row[netIdx])}</td>`;
+    html += `<td class="num">${row[coperniqIdx] === '' || row[coperniqIdx] == null ? '—' : row[coperniqIdx]}</td>`;
     html += '</tr>';
   });
 
@@ -536,14 +541,15 @@ function buildComparison(v1Data, v2Data) {
   const v1Rows = v1Data.rows.filter(r => r[0] !== 'No data yet' && r[0] !== 'TOTAL');
   const v2Rows = v2Data.rows.filter(r => r[0] !== 'No data yet' && r[0] !== 'TOTAL');
 
-  // hasAi (V1) columns: Rep, Lead, Human, AI, HumanSet%, AiSet%, Booking, Cancelled, Net
-  // !hasAi (V2) columns: Rep, Lead, Human, HumanSet%, Booking, Cancelled, Net
+  // hasAi (V1) columns: Rep, Lead, Human, AI, HumanSet%, AiSet%, Booking, Cancelled, Net, CoperniqAppts
+  // !hasAi (V2) columns: Rep, Lead, Human, HumanSet%, Booking, Cancelled, Net, CoperniqAppts
   const v1Leads = sumCol(v1Rows, 1), v2Leads = sumCol(v2Rows, 1);
   const v1Human = sumCol(v1Rows, 2), v2Human = sumCol(v2Rows, 2);
   const v1Ai = sumCol(v1Rows, 3);
   const v1Book = sumCol(v1Rows, 6), v2Book = sumCol(v2Rows, 4);
   const v1Cancel = sumCol(v1Rows, 7), v2Cancel = sumCol(v2Rows, 5);
   const v1Net = sumCol(v1Rows, 8), v2Net = sumCol(v2Rows, 6);
+  const v1Coperniq = sumCol(v1Rows, 9), v2Coperniq = sumCol(v2Rows, 7);
 
   const v1HumanPct = v1Leads === 0 ? '' : v1Human / v1Leads;
   const v1AiPct = v1Leads === 0 ? '' : v1Ai / v1Leads;
@@ -575,6 +581,7 @@ function buildComparison(v1Data, v2Data) {
         <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v1Book}</span></div>
         <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v1Cancel}</span></div>
         <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v1Net)}</span></div>
+        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v1Coperniq}</span></div>
       </div>
       <div class="compare-card">
         <h3><span class="dot v2"></span> Virtual 2 Totals</h3>
@@ -584,6 +591,7 @@ function buildComparison(v1Data, v2Data) {
         <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v2Book}</span></div>
         <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v2Cancel}</span></div>
         <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v2Net)}</span></div>
+        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v2Coperniq}</span></div>
       </div>
     </div>
     <div class="compare-card" style="margin-top:16px;">
