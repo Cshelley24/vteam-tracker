@@ -380,9 +380,12 @@ const state = {
 };
 
 // Column key -> row index, matching the layout Code.gs writes.
+// NOTE: this is the sheet's PHYSICAL column order, which is not the same
+// as the VISUAL display order — see headerDefs in buildLeaderboardTable
+// for how columns get reordered for display.
 function colIndexForKey(key, hasAi) {
-  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, coperniqAppts: 4, setPct: 5, booking: 6, cancelled: 7, net: 8, netPct: 9 };
-  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, coperniqAppts: 3, setPct: 4, booking: 5, cancelled: 6, net: 7, netPct: 8 };
+  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, coperniqAppts: 4, booking: 5, cancelled: 6, net: 7, setPct: 8, netPct: 9 };
+  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, coperniqAppts: 3, booking: 4, cancelled: 5, net: 6, setPct: 7, netPct: 8 };
   return (hasAi ? mapWithAi : mapNoAi)[key];
 }
 // ============================================
