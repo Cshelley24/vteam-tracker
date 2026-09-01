@@ -381,8 +381,8 @@ const state = {
 
 // Column key -> row index, matching the layout Code.gs writes.
 function colIndexForKey(key, hasAi) {
-  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, setHuman: 4, setAi: 5, booking: 6, cancelled: 7, net: 8, coperniqAppts: 9 };
-  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, setHuman: 3, booking: 4, cancelled: 5, net: 6, coperniqAppts: 7 };
+  const mapWithAi = { rep: 0, leads: 1, apptsHuman: 2, apptsAi: 3, coperniqAppts: 4, setPct: 5, booking: 6, cancelled: 7, net: 8, netPct: 9 };
+  const mapNoAi = { rep: 0, leads: 1, apptsHuman: 2, coperniqAppts: 3, setPct: 4, booking: 5, cancelled: 6, net: 7, netPct: 8 };
   return (hasAi ? mapWithAi : mapNoAi)[key];
 }
 // ============================================
@@ -447,17 +447,19 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
     return '<div class="empty-state">No data yet for this time window.</div>';
   }
 
-  const netIdx = colIndexForKey('net', hasAi);
+  const apptAiIdx = hasAi ? colIndexForKey('apptsAi', hasAi) : -1;
   const coperniqIdx = colIndexForKey('coperniqAppts', hasAi);
-  const bookIdx = hasAi ? 6 : 4;
-  const cancelIdx = hasAi ? 7 : 5;
-  const humanPctIdx = hasAi ? 4 : 3;
-  const aiPctIdx = 5; // only relevant when hasAi
+  const setPctIdx = colIndexForKey('setPct', hasAi);
+  const bookIdx = colIndexForKey('booking', hasAi);
+  const cancelIdx = colIndexForKey('cancelled', hasAi);
+  const netIdx = colIndexForKey('net', hasAi);
+  const netPctIdx = colIndexForKey('netPct', hasAi);
 
   const { sortKey, sortDir } = state[team];
   const sorted = sortDataRows(dataRows, sortKey, sortDir, hasAi);
 
-  // {label, key} per column — 'Rank' has no key, it's not sortable.
+  // Column order: Rank, Rep, Leads, Appts(Human), Appts(AI), Coperniq Appts,
+  // Set %, Booking, Cancelled, Net, Net Booking %.
   const headerDefs = hasAi
     ? [
         { label: 'Rank' },
@@ -465,23 +467,24 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
         { label: 'Leads', key: 'leads' },
         { label: 'Appts (Human)', key: 'apptsHuman' },
         { label: 'Appts (AI)', key: 'apptsAi' },
-        { label: 'Set % (Human)', key: 'setHuman' },
-        { label: 'Set % (AI)', key: 'setAi' },
+        { label: 'Coperniq Appts', key: 'coperniqAppts' },
+        { label: 'Set %', key: 'setPct' },
         { label: 'Booking', key: 'booking' },
         { label: 'Cancelled', key: 'cancelled' },
         { label: 'Net', key: 'net' },
-        { label: 'Coperniq Appts', key: 'coperniqAppts' }
+        { label: 'Net Booking %', key: 'netPct' }
       ]
     : [
         { label: 'Rank' },
         { label: 'Rep', key: 'rep' },
         { label: 'Leads', key: 'leads' },
         { label: 'Appts (Human)', key: 'apptsHuman' },
-        { label: 'Set % (Human)', key: 'setHuman' },
+        { label: 'Coperniq Appts', key: 'coperniqAppts' },
+        { label: 'Set %', key: 'setPct' },
         { label: 'Booking', key: 'booking' },
         { label: 'Cancelled', key: 'cancelled' },
         { label: 'Net', key: 'net' },
-        { label: 'Coperniq Appts', key: 'coperniqAppts' }
+        { label: 'Net Booking %', key: 'netPct' }
       ];
 
   let html = '<table><thead><tr>';
@@ -497,36 +500,33 @@ function buildLeaderboardTable(team, cols, rows, hasAi) {
   });
   html += '</tr></thead><tbody>';
 
+  function cellOrDash(v) {
+    return (v === '' || v == null) ? '—' : v;
+  }
+
+  function renderRow(row, rankHtml, rowClass) {
+    let r = `<tr${rowClass ? ' class="' + rowClass + '"' : ''}>`;
+    r += `<td>${rankHtml}</td>`;
+    r += `<td class="rep-name">${row[0]}</td>`;
+    r += `<td class="num">${row[1]}</td>`;
+    r += `<td class="num">${row[2]}</td>`;
+    if (hasAi) r += `<td class="num">${row[apptAiIdx]}</td>`;
+    r += `<td class="num">${cellOrDash(row[coperniqIdx])}</td>`;
+    r += `<td class="num">${fmtPct(row[setPctIdx])}</td>`;
+    r += `<td class="num">${cellOrDash(row[bookIdx])}</td>`;
+    r += `<td class="num">${cellOrDash(row[cancelIdx])}</td>`;
+    r += `<td class="num">${fmtNet(row[netIdx])}</td>`;
+    r += `<td class="num">${fmtPct(row[netPctIdx])}</td>`;
+    r += '</tr>';
+    return r;
+  }
+
   if (totalRow) {
-    html += '<tr class="total-row">';
-    html += `<td><span class="rank other">—</span></td>`;
-    html += `<td class="rep-name">TOTAL</td>`;
-    html += `<td class="num">${totalRow[1]}</td>`;
-    html += `<td class="num">${totalRow[2]}</td>`;
-    if (hasAi) html += `<td class="num">${totalRow[3]}</td>`;
-    html += `<td class="num">${fmtPct(totalRow[humanPctIdx])}</td>`;
-    if (hasAi) html += `<td class="num">${fmtPct(totalRow[aiPctIdx])}</td>`;
-    html += `<td class="num">${totalRow[bookIdx] === '' ? '—' : totalRow[bookIdx]}</td>`;
-    html += `<td class="num">${totalRow[cancelIdx] === '' ? '—' : totalRow[cancelIdx]}</td>`;
-    html += `<td class="num">${fmtNet(totalRow[netIdx])}</td>`;
-    html += `<td class="num">${totalRow[coperniqIdx] === '' || totalRow[coperniqIdx] == null ? '—' : totalRow[coperniqIdx]}</td>`;
-    html += '</tr>';
+    html += renderRow(totalRow, '<span class="rank other">—</span>', 'total-row');
   }
 
   sorted.forEach((row, i) => {
-    html += '<tr>';
-    html += `<td><span class="rank ${rankClass(i)}">${i + 1}</span></td>`;
-    html += `<td class="rep-name">${row[0]}</td>`;
-    html += `<td class="num">${row[1]}</td>`;
-    html += `<td class="num">${row[2]}</td>`;
-    if (hasAi) html += `<td class="num">${row[3]}</td>`;
-    html += `<td class="num">${fmtPct(row[humanPctIdx])}</td>`;
-    if (hasAi) html += `<td class="num">${fmtPct(row[aiPctIdx])}</td>`;
-    html += `<td class="num">${row[bookIdx] === '' ? '—' : row[bookIdx]}</td>`;
-    html += `<td class="num">${row[cancelIdx] === '' ? '—' : row[cancelIdx]}</td>`;
-    html += `<td class="num">${fmtNet(row[netIdx])}</td>`;
-    html += `<td class="num">${row[coperniqIdx] === '' || row[coperniqIdx] == null ? '—' : row[coperniqIdx]}</td>`;
-    html += '</tr>';
+    html += renderRow(row, `<span class="rank ${rankClass(i)}">${i + 1}</span>`, '');
   });
 
   html += '</tbody></table>';
@@ -541,19 +541,22 @@ function buildComparison(v1Data, v2Data) {
   const v1Rows = v1Data.rows.filter(r => r[0] !== 'No data yet' && r[0] !== 'TOTAL');
   const v2Rows = v2Data.rows.filter(r => r[0] !== 'No data yet' && r[0] !== 'TOTAL');
 
-  // hasAi (V1) columns: Rep, Lead, Human, AI, HumanSet%, AiSet%, Booking, Cancelled, Net, CoperniqAppts
-  // !hasAi (V2) columns: Rep, Lead, Human, HumanSet%, Booking, Cancelled, Net, CoperniqAppts
+  // hasAi (V1) columns: Rep, Lead, Human, AI, CoperniqAppts, Set%, Booking, Cancelled, Net, NetBookingPct
+  // !hasAi (V2) columns: Rep, Lead, Human, CoperniqAppts, Set%, Booking, Cancelled, Net, NetBookingPct
   const v1Leads = sumCol(v1Rows, 1), v2Leads = sumCol(v2Rows, 1);
   const v1Human = sumCol(v1Rows, 2), v2Human = sumCol(v2Rows, 2);
   const v1Ai = sumCol(v1Rows, 3);
-  const v1Book = sumCol(v1Rows, 6), v2Book = sumCol(v2Rows, 4);
-  const v1Cancel = sumCol(v1Rows, 7), v2Cancel = sumCol(v2Rows, 5);
-  const v1Net = sumCol(v1Rows, 8), v2Net = sumCol(v2Rows, 6);
-  const v1Coperniq = sumCol(v1Rows, 9), v2Coperniq = sumCol(v2Rows, 7);
+  const v1Coperniq = sumCol(v1Rows, 4), v2Coperniq = sumCol(v2Rows, 3);
+  const v1Book = sumCol(v1Rows, 6), v2Book = sumCol(v2Rows, 5);
+  const v1Cancel = sumCol(v1Rows, 7), v2Cancel = sumCol(v2Rows, 6);
+  const v1Net = sumCol(v1Rows, 8), v2Net = sumCol(v2Rows, 7);
 
-  const v1HumanPct = v1Leads === 0 ? '' : v1Human / v1Leads;
-  const v1AiPct = v1Leads === 0 ? '' : v1Ai / v1Leads;
-  const v2HumanPct = v2Leads === 0 ? '' : v2Human / v2Leads;
+  // Team-level Set% / Net Booking% are ratios of summed totals, not an
+  // average of per-rep percentages.
+  const v1SetPct = v1Leads === 0 ? '' : v1Coperniq / v1Leads;
+  const v2SetPct = v2Leads === 0 ? '' : v2Coperniq / v2Leads;
+  const v1NetPct = v1Leads === 0 ? '' : v1Net / v1Leads;
+  const v2NetPct = v2Leads === 0 ? '' : v2Net / v2Leads;
 
   function bar(label, a, b) {
     const total = a + b || 1;
@@ -575,23 +578,24 @@ function buildComparison(v1Data, v2Data) {
         <h3><span class="dot v1"></span> Virtual 1 Totals</h3>
         <div class="metric-row"><span class="metric-label">Lead Count</span><span class="metric-value">${v1Leads}</span></div>
         <div class="metric-row"><span class="metric-label">Appointments — Human</span><span class="metric-value">${v1Human}</span></div>
-        <div class="metric-row"><span class="metric-label">Set % (Human)</span><span class="metric-value">${fmtPct(v1HumanPct)}</span></div>
         <div class="metric-row"><span class="metric-label">Appointments — AI</span><span class="metric-value">${v1Ai}</span></div>
-        <div class="metric-row"><span class="metric-label">Set % (AI)</span><span class="metric-value">${fmtPct(v1AiPct)}</span></div>
+        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v1Coperniq}</span></div>
+        <div class="metric-row"><span class="metric-label">Set %</span><span class="metric-value">${fmtPct(v1SetPct)}</span></div>
         <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v1Book}</span></div>
         <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v1Cancel}</span></div>
         <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v1Net)}</span></div>
-        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v1Coperniq}</span></div>
+        <div class="metric-row"><span class="metric-label">Net Booking %</span><span class="metric-value">${fmtPct(v1NetPct)}</span></div>
       </div>
       <div class="compare-card">
         <h3><span class="dot v2"></span> Virtual 2 Totals</h3>
         <div class="metric-row"><span class="metric-label">Lead Count</span><span class="metric-value">${v2Leads}</span></div>
         <div class="metric-row"><span class="metric-label">Appointments — Human</span><span class="metric-value">${v2Human}</span></div>
-        <div class="metric-row"><span class="metric-label">Set % (Human)</span><span class="metric-value">${fmtPct(v2HumanPct)}</span></div>
+        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v2Coperniq}</span></div>
+        <div class="metric-row"><span class="metric-label">Set %</span><span class="metric-value">${fmtPct(v2SetPct)}</span></div>
         <div class="metric-row"><span class="metric-label">Booking</span><span class="metric-value">${v2Book}</span></div>
         <div class="metric-row"><span class="metric-label">Cancelled</span><span class="metric-value">${v2Cancel}</span></div>
         <div class="metric-row"><span class="metric-label">Net Booking</span><span class="metric-value">${fmtNet(v2Net)}</span></div>
-        <div class="metric-row"><span class="metric-label">Coperniq Appointments</span><span class="metric-value">${v2Coperniq}</span></div>
+        <div class="metric-row"><span class="metric-label">Net Booking %</span><span class="metric-value">${fmtPct(v2NetPct)}</span></div>
       </div>
     </div>
     <div class="compare-card" style="margin-top:16px;">
