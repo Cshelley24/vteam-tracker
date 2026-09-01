@@ -388,7 +388,12 @@ function colIndexForKey(key, hasAi) {
 // ============================================
 
 function gvizUrl(tabName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+  // headers=1 explicitly tells gviz that row 1 is the header row — without
+  // this, gviz auto-guesses based on data patterns, and with enough mixed
+  // text/number/blank columns it can guess wrong and treat the real header
+  // row as a literal data row (showing "Rep", "Lead Count" etc. as if they
+  // were a rep's actual stats).
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}&headers=1`;
 }
 
 async function fetchTab(tabName) {
